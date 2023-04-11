@@ -34,45 +34,49 @@ void mirror256_init(mirror256_context *ctx) {
     }
 }
 
-void mirror256_init(mirror256_context *ctx) {
-    memset(ctx->buffer, 0, sizeof(ctx->buffer));
-    ctx->counter = 0;
-    ctx->depth = MIRROR256_DEFAULT_DEPTH;
-    ctx->size = MIRROR256_DEFAULT_SIZE;
+void _mirror256_process(mirror256_context *ctx, const uint8_t *data) {
+    for (int i = 0; i < MIRROR256_DEFAULT_SIZE / 8; i++) {
+        uint8_t byte = data[i];
+        for (int j = 0; j < 8; j++) {
+            uint8_t bit = (byte >> j) & 1;
+            if (bit) {
+                for (int k = 0; k < MIRROR256_DEFAULT_SIZE / 4; k++) {
+                    ctx->last_hashes[j][k] ^= ctx->buffer[k];
+                }
+            }
+        }
 
-    // Initialize standard state
-    uint8_t standard_state[MIRROR256_DEFAULT_DEPTH][MIRROR256_DEFAULT_SIZE / 4];
-    init_standard_state(standard_state);
-
-    // Initialize last_hashes with initLastHashes logic
-    init_last_hashes(ctx->last_hashes);
-
-    // Copy standard state to last_hashes
-    for (int i = 0; i < ctx->depth; i++) {
-        memcpy(ctx->last_hashes[i], standard_state[i], MIRROR256_DEFAULT_SIZE / 4);
+        ctx->counter++;
+        if (ctx->counter >= ctx->depth) {
+            ctx->counter = 0;
+            for (int j = 0; j < MIRROR256_DEFAULT_SIZE / 4; j++) {
+                ctx->buffer[j] = 0;
+                for (int k = 0; k < MIRROR256_DEFAULT_DEPTH; k++) {
+                    ctx->buffer[j] ^= ctx->last_hashes[k][j];
+                }
+            }
+        }
     }
 }
 
 void mirror256_update(mirror256_context *ctx, const uint8_t *data, size_t len) {
-    size_t buffer_len = ctx->counter % 32;
-    size_t available = 32 - buffer_len;
-
+    size_t buffer_pos = ctx->counter % (MIRROR256_DEFAULT_SIZE / 8);
     while (len > 0) {
-        size_t to_copy = len < available ? len : available;
-        memcpy(ctx->buffer + buffer_len, data, to_copy);
-        data += to_copy;
-        len -= to_copy;
-        buffer_len += to_copy;
+        size_t block_remain = MIRROR256_DEFAULT_SIZE / 8 - buffer_pos;
+        size_t chunk_size = (len < block_remain) ? len : block_remain;
 
-        if (buffer_len == 32) {
-            // Process the buffer using _mirror256_process() logic from the Python code.
-            buffer_len = 0;
+        memcpy(&ctx->buffer[buffer_pos], data, chunk_size);
+        buffer_pos += chunk_size;
+        data += chunk_size;
+        len -= chunk_size;
+
+        if (buffer_pos == MIRROR256_DEFAULT_SIZE / 8) {
+            _mirror256_process(ctx, ctx->buffer);
+            buffer_pos = 0;
         }
-
-        available = 32 - buffer_len;
     }
 
-    ctx->counter += len;
+    ctx->counter += buffer_pos;
 }
 
 void mirror256_final(mirror256_context *ctx, uint8_t *digest) {
