@@ -2,17 +2,36 @@
 #include <string.h>
 #include <math.h>
 
-#include "mirror256.h"
-#include <string.h>
-#include <math.h>
-
 // Helper functions
 void init_standard_state(uint8_t state[][MIRROR256_DEFAULT_SIZE / 4]) {
-    // Implement the initStandardState logic from the Python code here.
+    for (int i = 0; i < MIRROR256_DEFAULT_DEPTH; i++) {
+        for (int j = 0; j < MIRROR256_DEFAULT_SIZE / 4; j++) {
+            state[i][j] = (uint8_t)(firstPrimesCubicRootDecRep[i * MIRROR256_DEFAULT_SIZE / 4 + j] * 256);
+        }
+    }
 }
 
 void init_last_hashes(uint8_t last_hashes[][MIRROR256_DEFAULT_SIZE / 4]) {
-    // Implement the initLastHashes logic from the Python code here.
+    memset(last_hashes, 0, MIRROR256_DEFAULT_DEPTH * MIRROR256_DEFAULT_SIZE / 4);
+}
+
+void mirror256_init(mirror256_context *ctx) {
+    memset(ctx->buffer, 0, sizeof(ctx->buffer));
+    ctx->counter = 0;
+    ctx->depth = MIRROR256_DEFAULT_DEPTH;
+    ctx->size = MIRROR256_DEFAULT_SIZE;
+
+    // Initialize standard state
+    uint8_t standard_state[MIRROR256_DEFAULT_DEPTH][MIRROR256_DEFAULT_SIZE / 4];
+    init_standard_state(standard_state);
+
+    // Initialize last_hashes with init_last_hashes logic
+    init_last_hashes(ctx->last_hashes);
+
+    // Copy standard state to last_hashes
+    for (int i = 0; i < ctx->depth; i++) {
+        memcpy(ctx->last_hashes[i], standard_state[i], MIRROR256_DEFAULT_SIZE / 4);
+    }
 }
 
 void mirror256_init(mirror256_context *ctx) {
