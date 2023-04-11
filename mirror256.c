@@ -1,16 +1,37 @@
+#include <stdio.h>
 #include "mirror256.h"
-#include <string.h>
 
-// Implement the mirror256 functions here.
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
 
-void mirror256_init(mirror256_context *ctx) {
-    // TODO: Implement the constructor logic here.
-}
+    FILE *file = fopen(argv[1], "rb");
+    if (file == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-void mirror256_update(mirror256_context *ctx, const uint8_t *data, size_t len) {
-    // TODO: Implement the update logic here.
-}
+    uint8_t buffer[1024];
+    size_t len;
+    mirror256_context ctx;
+    mirror256_init(&ctx);
 
-void mirror256_final(mirror256_context *ctx, uint8_t *digest) {
-    // TODO: Implement the final logic here.
+    while ((len = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+        mirror256_update(&ctx, buffer, len);
+    }
+
+    fclose(file);
+
+    uint8_t digest[32];
+    mirror256_final(&ctx, digest);
+
+    printf("Hash: ");
+    for (int i = 0; i < 32; i++) {
+        printf("%02x", digest[i]);
+    }
+    printf("\n");
+
+    return 0;
 }
