@@ -80,6 +80,28 @@ void mirror256_update(mirror256_context *ctx, const uint8_t *data, size_t len) {
 }
 
 void mirror256_final(mirror256_context *ctx, uint8_t *digest) {
-    // Process the remaining buffer data and compute the final hash value using the digest() logic from the Python code.
-    // Then, store the result in the "digest" parameter.
+    // Padding
+    size_t buffer_pos = ctx->counter % (MIRROR256_DEFAULT_SIZE / 8);
+    ctx->buffer[buffer_pos] = 0x80; // Append '1' bit to the message
+    buffer_pos++;
+
+    // If there's not enough space for the length bytes, process the current buffer and reset it
+    if (buffer_pos > (MIRROR256_DEFAULT_SIZE / 8) - 8) {
+        memset(&ctx->buffer[buffer_pos], 0, (MIRROR256_DEFAULT_SIZE / 8) - buffer_pos);
+        _mirror256_process(ctx, ctx->buffer);
+        buffer_pos = 0;
+    }
+
+    // Fill the remaining buffer with zeros
+    memset(&ctx->buffer[buffer_pos], 0, (MIRROR256_DEFAULT_SIZE / 8) - buffer_pos - 8);
+
+    // Append the length of the message in bits as a 64-bit little-endian integer
+    uint64_t message_len_bits = (uint64_t)ctx->counter * 8;
+    memcpy(&ctx->buffer[(MIRROR256_DEFAULT_SIZE / 8) - 8], &message_len_bits, 8);
+
+    // Process the final buffer
+    _mirror256_process(ctx, ctx->buffer);
+
+    // Copy the resulting hash from the buffer to the output digest
+    memcpy(digest, ctx->buffer, MIRROR256_DEFAULT_SIZE / 4);
 }
