@@ -1,4 +1,6 @@
-# Mirror-Hash
+# Mirror-Hash (WIP)
+
+## DISCLAIMER: Experimental, do not use in production!
 
 Mirror-Hash is an experimental hashing algorithm designed for use with optical/quantum computers. It is based on Toffoli and Fredkin gates and uses a unique structure that includes 64 layers of gates, each consisting of two sublayers of Toffoli or Fredkin gates in a zig-zag pattern. The symmetry (mirrored or not) and type of gate used is determined by the previous block of the hash (called the layer encoding), and there is also an XOR operation with the current layer encoding to avoid 0-to-0 hashes.
 
